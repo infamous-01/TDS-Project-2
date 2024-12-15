@@ -7,7 +7,8 @@ import httpx
 
 # Constants
 API_URL = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
-AIPROXY_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIzZjIwMDU1OTdAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.mGtFocaNamOEpoh3Y6WUB-xoAJJzW3EQntzLwbHUSXg"
+AIPROXY_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIyZjIwMDA5MDJAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.bNHClSd7-O0hw5yAh8jMpJZTAm43iuH3HieSwHWj7DE"
+MAX_VISUALIZATIONS = 10  # Limit the number of visualizations to 10
 
 def load_data(file_path):
     """Load CSV data with encoding detection."""
@@ -29,6 +30,7 @@ def analyze_data(df):
 def visualize_data(df, output_dir):
     """
     Generate and save visualizations to the specified output directory.
+    Limit the number of visualizations to MAX_VISUALIZATIONS.
     """
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -36,7 +38,7 @@ def visualize_data(df, output_dir):
         print(f"Created output directory: {output_dir}")
 
     sns.set(style="whitegrid")
-    numeric_columns = df.select_dtypes(include=['number']).columns
+    numeric_columns = df.select_dtypes(include=['number']).columns[:MAX_VISUALIZATIONS]  # Limit to MAX_VISUALIZATIONS
     for column in numeric_columns:
         plt.figure()
         sns.histplot(df[column].dropna(), kde=True)
@@ -56,7 +58,7 @@ def generate_narrative(analysis):
         f"Dataset summary: {analysis['summary']}\n"
         f"Missing values: {analysis['missing_values']}\n"
     )
-    prompt = f"Provide a detailed analysis based on the following summary: {summary_text}"
+    prompt = f"You are a data analyst with a passion for storywriting. Provide a detailed and compelling analysis based on the following summary: {summary_text}"
     data = {
         "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}]
@@ -74,18 +76,19 @@ def generate_narrative(analysis):
     return "Narrative generation failed due to an error."
 
 def main():
-    dataset_name = "goodreads"  # Replace with dynamic naming if needed
-    output_dir = os.path.join("D:\\VS CODE VENV", dataset_name)
+    # Ask the user to input the file path
+    file_path = input("Enter the full file path for the dataset: ").strip()
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return
+
+    # Dynamic dataset name based on the input file name
+    dataset_name = os.path.splitext(os.path.basename(file_path))[0]  # Extract filename without extension
+    output_dir = os.path.join(os.path.dirname(file_path), dataset_name)  # Save output in the same folder as the input file
     
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
     print(f"Output directory set to: {output_dir}")
-
-    # File path for the input file
-    file_path = r"D:\VS CODE VENV\goodreads.csv"
-    if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
-        return
 
     # Load data and perform analysis
     df = load_data(file_path)
